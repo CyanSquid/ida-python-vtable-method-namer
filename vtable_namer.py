@@ -37,6 +37,15 @@ def ida__segments():
 def ida__get_segment_name(segment):
     return idc.get_segm_name(segment)
 
+def ida__get_segm_end(ea):
+    return idc.get_segm_end(ea)
+
+def ida__get_rdata_segm():
+    for segment in ida__segments():
+        if ida__get_segment_name(segment) != ".rdata":
+            continue
+        return (segment, ida__get_segm_end(segment))
+
 # program functions
 
 def is_non_templated_vtable(ea):
@@ -90,25 +99,21 @@ def name_vtable_methods(ea):
     return ea
 
 def name_vtables(begin:int = 0, end:int = 0):
-    _begin = ida__get_min_ea()
-    _end   = ida__get_max_ea()
+    rdata = ida__get_rdata_segm()   
+    if end == 0:
+        end = rdata[1]
     
-    if begin != 0:
-       _begin = begin
-    if end != 0:
-        _end = end
-    
-    for segment in ida__segments():
-        if ida__get_segment_name(segment) != ".rdata":
+    if begin == 0:    
+        begin = rdata[0]
+        
+    i = begin
+    while i < end:
+        if not is_non_templated_vtable(i):
+            i += 1
             continue
-        i = _begin
-        while i < _end:
-            if not is_non_templated_vtable(i):
-                i += 1
-                continue
-            temp = i
-            i = name_vtable_methods(i)
-            if i == temp:
-                i += 1
+        temp = i
+        i = name_vtable_methods(i)
+        if i == temp:
+            i += 1
         
 name_vtables()
